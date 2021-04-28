@@ -42,6 +42,7 @@
     ]
   },
   "devDependencies": {
-    "@types/quill": "^2.0.6"
+    "@types/quill": "^2.0.6",
+    "quill-delta": "^4.2.2"
   }
 }
