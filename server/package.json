@@ -7,10 +7,12 @@
     "fastify": "^3.15.0",
     "fastify-cors": "^5.2.0",
     "fastify-websocket": "^3.1.0",
-    "http": "^0.0.1-security"
+    "http": "^0.0.1-security",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@types/node": "^15.0.1",
+    "@types/uuid": "^8.3.0",
     "@types/ws": "^7.4.2",
     "pino-pretty": "^4.7.1",
     "ts-node": "^9.1.1",

@@ -2,15 +2,18 @@ import { IncomingMessage, Server, ServerResponse } from "http";
 import { fastify, FastifyInstance } from "fastify";
 import { __prod__ } from "./constants";
 import fastifyCors from "fastify-cors";
-import fastifyWebsocket, { SocketStream } from "fastify-websocket";
+import fastifyWebsocket from "fastify-websocket";
+import Document from "./document";
+// import { v4 } from "uuid";
 
 type NoogleMessage = {
   type: string;
-  delta: any;
+  message: any;
 };
 
 export default class Application {
   public host: FastifyInstance<Server, IncomingMessage, ServerResponse>;
+  public documents: Document;
 
   public init = async (): Promise<void> => {
     this.host = fastify({
@@ -21,20 +24,47 @@ export default class Application {
     });
 
     this.host.register(fastifyCors, { origin: true, credentials: true });
-    this.host.register(fastifyWebsocket);
 
-    this.host.get("/", { websocket: true }, (connection: SocketStream) => {
+    this.host.register(fastifyWebsocket);
+    // this.socketMap = new Map();
+    this.documents = new Document();
+
+    this.host.get("/", { websocket: true }, (connection) => {
+      // connection.socket.on("connection", () => {
+      //   const id = v4();
+      //   this.socketMap.set(connection.socket, id);
+      // });
+
       connection.socket.on("message", (message: string) => {
         const data: NoogleMessage = JSON.parse(message);
+        console.log(data);
 
-        this.host.websocketServer.clients.forEach((client) => {
-          client.send(
-            JSON.stringify({
-              type: "received-updates",
-              delta: data.delta,
-            }),
-          );
-        });
+        switch (data.type) {
+          case "send-updates":
+            this.host.websocketServer.clients.forEach((client) => {
+              if (client.readyState === 1 && client != connection.socket) {
+                client.send(
+                  JSON.stringify({
+                    type: "received-updates",
+                    delta: data.message,
+                  }),
+                );
+              }
+            });
+            break;
+
+          case "retrieve-document":
+            const document = "";
+
+            this.documents.load(message, connection.socket);
+            connection.socket.send(
+              JSON.stringify({
+                type: "load-document",
+                data: document,
+              }),
+            );
+            break;
+        }
       });
     });
 
