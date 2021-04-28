@@ -1,10 +1,11 @@
 import { IncomingMessage, Server, ServerResponse } from "http";
 import { fastify, FastifyInstance } from "fastify";
-import { __prod__ } from "./constants";
+import { __prod__ } from "./utils/constants";
 import fastifyCors from "fastify-cors";
 import fastifyWebsocket from "fastify-websocket";
 import Document from "./document";
-// import { v4 } from "uuid";
+import { Connection, IDatabaseDriver, MikroORM } from "@mikro-orm/core";
+import ormConfig from "./orm.config";
 
 type NoogleMessage = {
   type: string;
@@ -12,8 +13,23 @@ type NoogleMessage = {
 };
 
 export default class Application {
+  public orm: MikroORM<IDatabaseDriver<Connection>>;
   public host: FastifyInstance<Server, IncomingMessage, ServerResponse>;
   public documents: Document;
+
+  public connect = async (): Promise<void> => {
+    try {
+      this.orm = await MikroORM.init(ormConfig);
+      const migrator = this.orm.getMigrator();
+      const migrations = await migrator.getPendingMigrations();
+      if (migrations && migrations.length > 0) {
+        await migrator.up();
+      }
+    } catch (error) {
+      console.log(`[noogle] ERROR – Unable to connect to database!`, error);
+      throw Error(error);
+    }
+  };
 
   public init = async (): Promise<void> => {
     this.host = fastify({
@@ -26,37 +42,31 @@ export default class Application {
     this.host.register(fastifyCors, { origin: true, credentials: true });
 
     this.host.register(fastifyWebsocket);
-    // this.socketMap = new Map();
+
     this.documents = new Document();
 
     this.host.get("/", { websocket: true }, (connection) => {
-      // connection.socket.on("connection", () => {
-      //   const id = v4();
-      //   this.socketMap.set(connection.socket, id);
-      // });
-
       connection.socket.on("message", (message: string) => {
         const data: NoogleMessage = JSON.parse(message);
-        console.log(data);
 
         switch (data.type) {
           case "send-updates":
-            this.host.websocketServer.clients.forEach((client) => {
-              if (client.readyState === 1 && client != connection.socket) {
+            for (const client of this.documents.store[data.message.id]) {
+              if (client != connection.socket) {
                 client.send(
                   JSON.stringify({
                     type: "received-updates",
-                    delta: data.message,
+                    delta: data.message.delta,
                   }),
                 );
               }
-            });
+            }
             break;
 
           case "retrieve-document":
             const document = "";
 
-            this.documents.load(message, connection.socket);
+            this.documents.load(data.message.id, connection.socket);
             connection.socket.send(
               JSON.stringify({
                 type: "load-document",

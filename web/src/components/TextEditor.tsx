@@ -46,7 +46,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
         socket.send(
           JSON.stringify({
             type: "retrieve-document",
-            message: documentId,
+            message: { id: documentId },
           }),
         );
     }
@@ -60,7 +60,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
         socket.send(
           JSON.stringify({
             type: "send-updates",
-            message: delta,
+            message: { id: documentId, delta: delta },
           }),
         );
       };
@@ -71,7 +71,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
         quill.off("text-change", handler);
       };
     }
-  }, [socket, quill]);
+  }, [socket, quill, documentId]);
 
   // Retrieve Changes/Updates from Server
   useEffect(() => {
@@ -82,7 +82,6 @@ const TextEditor: React.FC<TextEditorProps> = () => {
 
       socket.onmessage = (event) => {
         const message: NoogleMessage = JSON.parse(event.data);
-        console.log(message.type + "all");
 
         switch (message.type) {
           case "load-document":
