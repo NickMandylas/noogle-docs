@@ -1,1 +1,4 @@
-# web
+# Web
+
+Frontend Stack: ReactJS
+
