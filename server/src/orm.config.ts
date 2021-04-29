@@ -2,6 +2,8 @@ import "dotenv/config";
 import path from "path";
 import { MikroORM } from "@mikro-orm/core";
 import { __prod__ } from "./utils/constants";
+import { RedisCacheAdapter } from "./utils/cacheAdapter";
+import redis from "./utils/redis";
 
 export default {
   migrations: {
@@ -20,4 +22,12 @@ export default {
   entitiesTs: ["./src/entities/**/*.ts"],
   type: "postgresql",
   debug: !__prod__,
+  resultCache: {
+    adapter: RedisCacheAdapter,
+    options: { expiration: 1000, client: redis() },
+  },
+  cache: {
+    adapter: RedisCacheAdapter,
+    options: { client: redis() },
+  },
 } as Parameters<typeof MikroORM.init>[0];

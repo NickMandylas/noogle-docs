@@ -73,6 +73,23 @@ const TextEditor: React.FC<TextEditorProps> = () => {
     }
   }, [socket, quill, documentId]);
 
+  useEffect(() => {
+    if (quill && socket) {
+      const interval = setInterval(() => {
+        socket.send(
+          JSON.stringify({
+            type: "save-document",
+            message: { id: documentId, delta: quill.getContents() },
+          }),
+        );
+      }, 2000);
+
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [socket, quill, documentId]);
+
   // Retrieve Changes/Updates from Server
   useEffect(() => {
     if (quill && socket) {

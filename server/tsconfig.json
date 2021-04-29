@@ -25,10 +25,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "baseUrl": "./",
-    "paths": {
-      "*": ["./src/*"]
-    }
   },
   "exclude": ["node_modules", "dist"],
-  "include": ["./src/**/*.ts", "src/types/**.d.ts"]
+  "include": ["./src/**/*.ts", "src/types/**.d.ts", "src/utils/cacheAdapter"]
 }

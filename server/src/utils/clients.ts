@@ -1,11 +1,11 @@
 import WebSocket from "ws";
 
-type DocumentStore = { [key: string]: any };
+type ClientStoreType = { [key: string]: any };
 
-export default class Document {
-  public store: DocumentStore = {};
+export default class ClientStore {
+  public store: ClientStoreType = {};
 
-  public load = (id: string, socket: WebSocket) => {
+  public join = (id: string, socket: WebSocket) => {
     const document = this.store[id] || new Set();
     this.store[id] = document;
     document.add(socket);
