@@ -5,8 +5,9 @@ Utilising websockets, this is a realtime, collaborative and persistent online te
 
 ---
 
-Front-end: Built with ReactJS (utilising Create React App). The TextEditor used is QuillJS.
-Back-end: Fastify (with Fastify-WebSockets), PostgreSQL and Redis.
+**Front-end:** Built with ReactJS (utilising Create React App). The TextEditor used is QuillJS.
+
+**Back-end:** Fastify (with Fastify-WebSockets), PostgreSQL and Redis.
 
 ---
 
