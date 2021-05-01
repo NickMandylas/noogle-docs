@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import Quill, { TextChangeHandler } from "quill";
 import Delta from "quill-delta";
 import { useParams } from "react-router-dom";
+import isUUID from "validator/es/lib/isUUID";
 import "quill/dist/quill.snow.css";
 
 interface TextEditorProps {}
@@ -30,7 +31,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
 
   // Page Load -- Initiate WebSocket
   useEffect(() => {
-    const s = new WebSocket("ws://192.168.114.163:4000");
+    const s = new WebSocket("ws://localhost:4000");
 
     setSocket(s);
 
@@ -38,6 +39,13 @@ const TextEditor: React.FC<TextEditorProps> = () => {
       s.close();
     };
   }, []);
+
+  useEffect(() => {
+    if (!isUUID(documentId) && socket) {
+      socket.close();
+      setSocket(null);
+    }
+  }, [documentId, socket]);
 
   // Request Document Data -- When Socket Opens
   useEffect(() => {
@@ -47,7 +55,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
           JSON.stringify({
             type: "retrieve-document",
             message: { id: documentId },
-          }),
+          })
         );
     }
   }, [socket, quill, documentId]);
@@ -61,7 +69,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
           JSON.stringify({
             type: "send-updates",
             message: { id: documentId, delta: delta },
-          }),
+          })
         );
       };
 
@@ -80,7 +88,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
           JSON.stringify({
             type: "save-document",
             message: { id: documentId, delta: quill.getContents() },
-          }),
+          })
         );
       }, 2000);
 
