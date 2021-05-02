@@ -29,6 +29,8 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development ts-node-dev --files --respawn -r tsconfig-paths/register src/index.ts",
+    "build": "tsc",
+    "start": "NODE_ENV=production NODE_PATH=./dist node dist/index.js",
     "migration": "npx mikro-orm migration:create"
   },
   "mikro-orm": {
