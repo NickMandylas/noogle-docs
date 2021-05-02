@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import Quill, { TextChangeHandler } from "quill";
 import Delta from "quill-delta";
 import { useParams } from "react-router-dom";
-import isUUID from "validator/es/lib/isUUID";
 import "quill/dist/quill.snow.css";
 
 interface TextEditorProps {}
@@ -40,13 +39,6 @@ const TextEditor: React.FC<TextEditorProps> = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isUUID(documentId) && socket) {
-      socket.close();
-      setSocket(null);
-    }
-  }, [documentId, socket]);
-
   // Request Document Data -- When Socket Opens
   useEffect(() => {
     if (quill && socket) {
@@ -81,9 +73,15 @@ const TextEditor: React.FC<TextEditorProps> = () => {
     }
   }, [socket, quill, documentId]);
 
+  // Document Save
   useEffect(() => {
     if (quill && socket) {
       const interval = setInterval(() => {
+        if (socket.readyState === 2 || socket.readyState === 3) {
+          clearInterval(interval);
+          return;
+        }
+
         socket.send(
           JSON.stringify({
             type: "save-document",
@@ -117,6 +115,10 @@ const TextEditor: React.FC<TextEditorProps> = () => {
           case "received-updates":
             handler(message.delta);
             break;
+
+          case "invalid-document":
+            quill.setText("Invalid Document ID");
+            socket.close();
         }
       };
     }

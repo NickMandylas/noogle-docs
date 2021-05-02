@@ -8,6 +8,7 @@ import ormConfig from "./orm.config";
 import { Document } from "./entities/Document";
 import redis from "./utils/redis";
 import ClientStore from "./utils/clients";
+import validator from "validator";
 
 type NoogleMessage = {
   type: string;
@@ -62,7 +63,7 @@ export default class Application {
     this.host.get("/", { websocket: true }, (connection) => {
       connection.socket.on("message", async (message: string) => {
         const data: NoogleMessage = JSON.parse(message);
-        const em = this.orm.em.fork(); // Create own mikroORM instance
+        const em = this.orm.em.fork();
 
         switch (data.type) {
           case "send-updates": {
@@ -80,6 +81,16 @@ export default class Application {
           }
 
           case "retrieve-document": {
+            if (!validator.isUUID(data.message.id)) {
+              connection.socket.send(
+                JSON.stringify({
+                  type: "invalid-document",
+                  delta: {},
+                })
+              );
+              break;
+            }
+
             const document = await em.findOne(Document, {
               id: data.message.id,
             });
