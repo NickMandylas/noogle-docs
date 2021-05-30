@@ -78,6 +78,25 @@ export default class Application {
             break;
           }
 
+          case "send-cursor": {
+            console.log(data.message);
+            for (const client of this.clients.store[data.message.id]) {
+              if (client != connection.socket) {
+                client.send(
+                  JSON.stringify({
+                    type: "received-cursor",
+                    cursor: {
+                      range: data.message.range,
+                      id: data.message.userId,
+                      name: data.message.name,
+                    },
+                  }),
+                );
+              }
+            }
+            break;
+          }
+
           case "retrieve-document": {
             const document = await this.orm.em.findOne(Document, {
               id: data.message.id,
