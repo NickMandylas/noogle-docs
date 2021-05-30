@@ -14,6 +14,9 @@ function App() {
         <Route path="/" exact>
           <Redirect to={`/document/${v4()}`} />
         </Route>
+        <Route path="/document" exact>
+          <Redirect to={`/document/${v4()}`} />
+        </Route>
         <Route path="/document/:id">
           <TextEditor />
         </Route>

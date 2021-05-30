@@ -8,6 +8,7 @@ import ormConfig from "./orm.config";
 import { Document } from "./entities/Document";
 import redis from "./utils/redis";
 import ClientStore from "./utils/clients";
+import validator from "validator";
 
 type NoogleMessage = {
   type: string;
@@ -62,6 +63,7 @@ export default class Application {
     this.host.get("/", { websocket: true }, (connection) => {
       connection.socket.on("message", async (message: string) => {
         const data: NoogleMessage = JSON.parse(message);
+        const em = this.orm.em.fork();
 
         switch (data.type) {
           case "send-updates": {
@@ -71,7 +73,7 @@ export default class Application {
                   JSON.stringify({
                     type: "received-updates",
                     delta: data.message.delta,
-                  }),
+                  })
                 );
               }
             }
@@ -98,17 +100,27 @@ export default class Application {
           }
 
           case "retrieve-document": {
-            const document = await this.orm.em.findOne(Document, {
+            if (!validator.isUUID(data.message.id)) {
+              connection.socket.send(
+                JSON.stringify({
+                  type: "invalid-document",
+                  delta: {},
+                })
+              );
+              break;
+            }
+
+            const document = await em.findOne(Document, {
               id: data.message.id,
             });
 
             if (!document) {
-              const newDocument = this.orm.em.create(Document, {
+              const newDocument = em.create(Document, {
                 id: data.message.id,
                 delta: "",
               });
 
-              await this.orm.em.persistAndFlush(newDocument);
+              await em.persistAndFlush(newDocument);
             }
 
             this.clients.join(data.message.id, connection.socket);
@@ -117,7 +129,7 @@ export default class Application {
               JSON.stringify({
                 type: "load-document",
                 delta: !!document ? document.delta : "",
-              }),
+              })
             );
 
             break;
@@ -129,18 +141,19 @@ export default class Application {
 
             if (cache) {
               if (cache != deltaJSON) {
-                const document = await this.orm.em.findOne(Document, {
+                const document = await em.findOne(Document, {
                   id: data.message.id,
                 });
 
                 if (document) {
                   document.delta = data.message.delta;
-                  await this.orm.em.persistAndFlush(document);
+
+                  await em.persistAndFlush(document);
                   await redis().set(
                     `DOCUMENT_${data.message.id}`,
                     deltaJSON,
                     "EX",
-                    60 * 60 * 24,
+                    60 * 60 * 24
                   );
                 }
               }
@@ -149,7 +162,7 @@ export default class Application {
                 `DOCUMENT_${data.message.id}`,
                 deltaJSON,
                 "EX",
-                60 * 60 * 24,
+                60 * 60 * 24
               );
             }
 

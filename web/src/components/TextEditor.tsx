@@ -57,7 +57,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
 
   // Page Load -- Initiate WebSocket
   useEffect(() => {
-    const s = new WebSocket("ws://192.168.114.163:4000");
+    const s = new WebSocket("ws://localhost:4000");
 
     setSocket(s);
 
@@ -141,6 +141,11 @@ const TextEditor: React.FC<TextEditorProps> = () => {
   useEffect(() => {
     if (quill && socket) {
       const interval = setInterval(() => {
+        if (socket.readyState === 2 || socket.readyState === 3) {
+          clearInterval(interval);
+          return;
+        }
+
         socket.send(
           JSON.stringify({
             type: "save-document",
@@ -174,6 +179,10 @@ const TextEditor: React.FC<TextEditorProps> = () => {
           case "received-updates":
             handler(message.delta);
             break;
+
+          case "invalid-document":
+            quill.setText("Invalid Document ID");
+            socket.close();
         }
       };
     }
