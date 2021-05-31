@@ -7,24 +7,15 @@ import Quill, {
 import Delta from "quill-delta";
 import { useParams } from "react-router-dom";
 import isUUID from "validator/es/lib/isUUID";
-import QuillCursors, { Cursor } from "quill-cursors";
+import QuillCursors from "quill-cursors";
 import "quill/dist/quill.snow.css";
 
 interface TextEditorProps {}
 
 type NoogleMessage = {
   type: string;
-  delta: Delta;
-};
-
-type NoogleCursor = {
-  type: string;
-  cursor: Cursor;
-};
-
-type NoogleSelection = {
-  type: string;
-  selection: {
+  delta?: Delta;
+  cursor?: {
     id: string;
     name: string;
     range: RangeStatic;
@@ -46,6 +37,16 @@ const toolBarOptions = [
   [{ align: [] }],
   ["blockquote", "code-block"],
   ["clean"],
+];
+
+const cursorColours = [
+  "#f45",
+  "#00ff54",
+  "#00ff",
+  "#57f",
+  "#984055",
+  "#800080",
+  "#FFA500",
 ];
 
 const TextEditor: React.FC<TextEditorProps> = () => {
@@ -80,16 +81,16 @@ const TextEditor: React.FC<TextEditorProps> = () => {
 
   // Request Document Data -- When Socket Opens
   useEffect(() => {
-    if (quill && socket) {
+    if (quill && socket && user) {
       socket.onopen = () =>
         socket.send(
           JSON.stringify({
             type: "retrieve-document",
-            message: { id: documentId },
+            message: { id: documentId, userId: user.id },
           }),
         );
     }
-  }, [socket, quill, documentId]);
+  }, [socket, quill, documentId, user]);
 
   // Text Change -- Send Text Update to Server
   useEffect(() => {
@@ -162,7 +163,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
 
   // Retrieve Changes/Updates from Server
   useEffect(() => {
-    if (quill && socket) {
+    if (quill && socket && cursors) {
       const handler = (delta: Delta) => {
         quill.updateContents(delta);
       };
@@ -172,35 +173,40 @@ const TextEditor: React.FC<TextEditorProps> = () => {
 
         switch (message.type) {
           case "load-document":
-            quill.setContents(message.delta);
+            quill.setContents(message.delta!);
             quill.enable();
+
             break;
 
           case "received-updates":
-            handler(message.delta);
+            handler(message.delta!);
+            break;
+
+          case "received-cursor":
+            if (message.cursor) {
+              const cursor = message.cursor;
+              const cursorColour =
+                cursorColours[Math.floor(Math.random() * cursorColours.length)];
+              cursors.createCursor(cursor.id, cursor.name, cursorColour); // If cursor exist, automatically ignores.
+              cursors.toggleFlag(cursor.id, true);
+              cursors.moveCursor(cursor.id, cursor.range);
+            }
+            break;
+
+          case "remove-cursor":
+            if (message.cursor) {
+              cursors.removeCursor(message.cursor.id);
+            }
             break;
 
           case "invalid-document":
             quill.setText("Invalid Document ID");
             socket.close();
+            break;
         }
       };
     }
-  }, [socket, quill]);
-
-  // useEffect(() => {
-  //   if (quill && socket && cursors) {
-  //     socket.onmessage = (event) => {
-  //       const cursor: NoogleCursor = JSON.parse(event.data);
-
-  //       switch (cursor.type) {
-  //         case "received-cursor":
-  //           console.log(cursors.cursors);
-  //           break;
-  //       }
-  //     };
-  //   }
-  // }, [quill, socket, cursors]);
+  }, [socket, quill, cursors]);
 
   const wrapperRef = useCallback((wrapper: HTMLDivElement) => {
     if (wrapper == null) return;
@@ -213,7 +219,10 @@ const TextEditor: React.FC<TextEditorProps> = () => {
 
     const q = new Quill(editor, {
       theme: "snow",
-      modules: { toolbar: toolBarOptions, cursors: true },
+      modules: {
+        toolbar: toolBarOptions,
+        cursors: { transformOnTextChange: true },
+      },
     });
 
     q.disable();

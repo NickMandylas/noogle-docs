@@ -1,14 +1,14 @@
 import WebSocket from "ws";
 
-type ClientStoreType = { [key: string]: any };
+type StoreType = { [key: string]: any };
 
 export default class ClientStore {
-  public store: ClientStoreType = {};
+  public store: StoreType = {};
 
-  public join = (id: string, socket: WebSocket) => {
+  public join = (id: string, userId: string, socket: WebSocket) => {
     const document = this.store[id] || new Set();
     this.store[id] = document;
-    document.add(socket);
+    document.add({ socket, userId });
   };
 
   public leave = (id: string, socket: WebSocket) => {

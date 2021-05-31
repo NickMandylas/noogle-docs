@@ -9,6 +9,7 @@ import { Document } from "./entities/Document";
 import redis from "./utils/redis";
 import ClientStore from "./utils/clients";
 import validator from "validator";
+import WebsocketEx from "./types/websocket";
 
 type NoogleMessage = {
   type: string;
@@ -61,19 +62,34 @@ export default class Application {
     this.host.register(fastifyWebsocket);
 
     this.host.get("/", { websocket: true }, (connection) => {
-      connection.socket.on("message", async (message: string) => {
+      const socket = connection.socket as unknown as WebsocketEx;
+
+      socket.on("close", () => {
+        for (const client of this.clients.store[socket.documentId!]) {
+          client.socket.send(
+            JSON.stringify({
+              type: "remove-cursor",
+              cursor: {
+                id: socket.userId,
+              },
+            }),
+          );
+        }
+      });
+
+      socket.on("message", async (message: string) => {
         const data: NoogleMessage = JSON.parse(message);
         const em = this.orm.em.fork();
 
         switch (data.type) {
           case "send-updates": {
             for (const client of this.clients.store[data.message.id]) {
-              if (client != connection.socket) {
-                client.send(
+              if (client.socket != socket) {
+                client.socket.send(
                   JSON.stringify({
                     type: "received-updates",
                     delta: data.message.delta,
-                  })
+                  }),
                 );
               }
             }
@@ -81,10 +97,9 @@ export default class Application {
           }
 
           case "send-cursor": {
-            console.log(data.message);
             for (const client of this.clients.store[data.message.id]) {
-              if (client != connection.socket) {
-                client.send(
+              if (client.socket != socket) {
+                client.socket.send(
                   JSON.stringify({
                     type: "received-cursor",
                     cursor: {
@@ -101,11 +116,11 @@ export default class Application {
 
           case "retrieve-document": {
             if (!validator.isUUID(data.message.id)) {
-              connection.socket.send(
+              socket.send(
                 JSON.stringify({
                   type: "invalid-document",
                   delta: {},
-                })
+                }),
               );
               break;
             }
@@ -123,13 +138,16 @@ export default class Application {
               await em.persistAndFlush(newDocument);
             }
 
-            this.clients.join(data.message.id, connection.socket);
+            socket.userId = data.message.userId;
+            socket.documentId = data.message.id;
 
-            connection.socket.send(
+            this.clients.join(data.message.id, data.message.userId, socket);
+
+            socket.send(
               JSON.stringify({
                 type: "load-document",
                 delta: !!document ? document.delta : "",
-              })
+              }),
             );
 
             break;
@@ -153,7 +171,7 @@ export default class Application {
                     `DOCUMENT_${data.message.id}`,
                     deltaJSON,
                     "EX",
-                    60 * 60 * 24
+                    60 * 60 * 24,
                   );
                 }
               }
@@ -162,7 +180,7 @@ export default class Application {
                 `DOCUMENT_${data.message.id}`,
                 deltaJSON,
                 "EX",
-                60 * 60 * 24
+                60 * 60 * 24,
               );
             }
 

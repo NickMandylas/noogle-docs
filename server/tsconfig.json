@@ -24,8 +24,8 @@
     "experimentalDecorators": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "baseUrl": "./",
+    "baseUrl": "./"
   },
   "exclude": ["node_modules", "dist"],
-  "include": ["./src/**/*.ts", "src/types/**.d.ts", "src/utils/cacheAdapter"]
+  "include": ["./src/**/*.ts", "src/types/**.d.ts"]
 }
