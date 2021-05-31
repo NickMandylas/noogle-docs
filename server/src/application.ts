@@ -65,8 +65,10 @@ export default class Application {
       const socket = connection.socket as unknown as WebsocketEx;
 
       socket.on("close", () => {
+        this.clients.leave(socket.documentId, socket);
+
         for (const client of this.clients.store[socket.documentId!]) {
-          client.socket.send(
+          client.send(
             JSON.stringify({
               type: "remove-cursor",
               cursor: {
@@ -84,8 +86,8 @@ export default class Application {
         switch (data.type) {
           case "send-updates": {
             for (const client of this.clients.store[data.message.id]) {
-              if (client.socket != socket) {
-                client.socket.send(
+              if (client != socket) {
+                client.send(
                   JSON.stringify({
                     type: "received-updates",
                     delta: data.message.delta,
@@ -98,8 +100,8 @@ export default class Application {
 
           case "send-cursor": {
             for (const client of this.clients.store[data.message.id]) {
-              if (client.socket != socket) {
-                client.socket.send(
+              if (client != socket) {
+                client.send(
                   JSON.stringify({
                     type: "received-cursor",
                     cursor: {
@@ -141,7 +143,7 @@ export default class Application {
             socket.userId = data.message.userId;
             socket.documentId = data.message.id;
 
-            this.clients.join(data.message.id, data.message.userId, socket);
+            this.clients.join(data.message.id, socket);
 
             socket.send(
               JSON.stringify({

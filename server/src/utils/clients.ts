@@ -5,10 +5,10 @@ type StoreType = { [key: string]: any };
 export default class ClientStore {
   public store: StoreType = {};
 
-  public join = (id: string, userId: string, socket: WebSocket) => {
+  public join = (id: string, socket: WebSocket) => {
     const document = this.store[id] || new Set();
     this.store[id] = document;
-    document.add({ socket, userId });
+    document.add(socket);
   };
 
   public leave = (id: string, socket: WebSocket) => {
