@@ -8,9 +8,12 @@ import Delta from "quill-delta";
 import { useParams } from "react-router-dom";
 import isUUID from "validator/es/lib/isUUID";
 import QuillCursors from "quill-cursors";
-import "quill/dist/quill.snow.css";
 import { cursorColours, toolBarOptions } from "../constants";
+import { ToastContainer, toast } from "react-toastify";
 import InputForm from "./InputForm";
+
+import "quill/dist/quill.snow.css";
+import "react-toastify/dist/ReactToastify.css";
 
 interface TextEditorProps {}
 
@@ -28,6 +31,8 @@ export type NoogleUser = {
   id: string;
   name: string;
 };
+
+const cursorStore: string[] = [];
 
 const TextEditor: React.FC<TextEditorProps> = () => {
   const { id: documentId } = useParams<{ id: string }>();
@@ -62,7 +67,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
       socket.send(
         JSON.stringify({
           type: "retrieve-document",
-          message: { id: documentId, userId: user.id },
+          message: { id: documentId, userId: user.id, name: user.name },
         }),
       );
     }
@@ -165,7 +170,14 @@ const TextEditor: React.FC<TextEditorProps> = () => {
               const cursor = message.cursor;
               const cursorColour =
                 cursorColours[Math.floor(Math.random() * cursorColours.length)];
-              cursors.createCursor(cursor.id, cursor.name, cursorColour); // If cursor exist, automatically ignores.
+
+              // TODO - Should be its own websocket event.
+              if (!cursorStore.includes(message.cursor.id)) {
+                cursorStore.push(message.cursor.id);
+                cursors.createCursor(cursor.id, cursor.name, cursorColour);
+                toast(`👋 ${cursor.name} has entered the document.`);
+              }
+
               cursors.toggleFlag(cursor.id, true);
               cursors.moveCursor(cursor.id, cursor.range);
             }
@@ -174,6 +186,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
           case "remove-cursor":
             if (message.cursor) {
               cursors.removeCursor(message.cursor.id);
+              toast(`🚪🚶 ${message.cursor.name} has left the document.`);
             }
             break;
 
@@ -218,6 +231,17 @@ const TextEditor: React.FC<TextEditorProps> = () => {
 
   return (
     <div>
+      <ToastContainer
+        position="top-right"
+        autoClose={1000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
       <div className="container" ref={wrapperRef}></div>
     </div>
   );

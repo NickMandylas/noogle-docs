@@ -76,6 +76,7 @@ export default class Application {
               type: "remove-cursor",
               cursor: {
                 id: socket.userId,
+                name: socket.userName,
               },
             }),
           );
@@ -148,6 +149,7 @@ export default class Application {
             }
 
             socket.userId = data.message.userId;
+            socket.userName = data.message.name;
             socket.documentId = data.message.id;
 
             this.clients.join(data.message.id, socket);
