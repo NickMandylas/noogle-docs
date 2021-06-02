@@ -9,6 +9,8 @@ import { useParams } from "react-router-dom";
 import isUUID from "validator/es/lib/isUUID";
 import QuillCursors from "quill-cursors";
 import "quill/dist/quill.snow.css";
+import { cursorColours, toolBarOptions } from "../constants";
+import InputForm from "./InputForm";
 
 interface TextEditorProps {}
 
@@ -22,32 +24,10 @@ type NoogleMessage = {
   };
 };
 
-type NoogleUser = {
+export type NoogleUser = {
   id: string;
   name: string;
 };
-
-const toolBarOptions = [
-  [{ header: [1, 2, 3, 4, 5, 6, false] }],
-  [{ font: [] }],
-  [{ list: "ordered" }, { list: "bullet" }],
-  ["bold", "italic", "underline"],
-  [{ color: [] }, { background: [] }],
-  [{ script: "sub" }, { script: "super" }],
-  [{ align: [] }],
-  ["blockquote", "code-block"],
-  ["clean"],
-];
-
-const cursorColours = [
-  "#f45",
-  "#00ff54",
-  "#00ff",
-  "#57f",
-  "#984055",
-  "#800080",
-  "#FFA500",
-];
 
 const TextEditor: React.FC<TextEditorProps> = () => {
   const { id: documentId } = useParams<{ id: string }>();
@@ -61,9 +41,6 @@ const TextEditor: React.FC<TextEditorProps> = () => {
     const s = new WebSocket("ws://localhost:4000");
 
     setSocket(s);
-
-    const id = String(Math.round(Math.random() * 1000));
-    setUser({ id: id, name: id });
 
     return () => {
       s.close();
@@ -82,13 +59,12 @@ const TextEditor: React.FC<TextEditorProps> = () => {
   // Request Document Data -- When Socket Opens
   useEffect(() => {
     if (quill && socket && user) {
-      socket.onopen = () =>
-        socket.send(
-          JSON.stringify({
-            type: "retrieve-document",
-            message: { id: documentId, userId: user.id },
-          }),
-        );
+      socket.send(
+        JSON.stringify({
+          type: "retrieve-document",
+          message: { id: documentId, userId: user.id },
+        }),
+      );
     }
   }, [socket, quill, documentId, user]);
 
@@ -96,7 +72,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
   useEffect(() => {
     if (quill && socket) {
       const handler: TextChangeHandler = (delta, _, source) => {
-        if (source !== "user") return;
+        if (source !== "user" || quill.isEnabled() === false) return;
         socket.send(
           JSON.stringify({
             type: "send-updates",
@@ -117,7 +93,7 @@ const TextEditor: React.FC<TextEditorProps> = () => {
   useEffect(() => {
     if (quill && cursors && socket && user) {
       const handler: SelectionChangeHandler = (range, _, source) => {
-        if (source !== "user") return;
+        if (source !== "user" || quill.isEnabled() === false) return;
         socket.send(
           JSON.stringify({
             type: "send-cursor",
@@ -147,12 +123,14 @@ const TextEditor: React.FC<TextEditorProps> = () => {
           return;
         }
 
-        socket.send(
-          JSON.stringify({
-            type: "save-document",
-            message: { id: documentId, delta: quill.getContents() },
-          }),
-        );
+        if (quill.isEnabled() === true) {
+          socket.send(
+            JSON.stringify({
+              type: "save-document",
+              message: { id: documentId, delta: quill.getContents() },
+            }),
+          );
+        }
       }, 2000);
 
       return () => {
@@ -233,6 +211,10 @@ const TextEditor: React.FC<TextEditorProps> = () => {
     setQull(q);
     setCursors(c);
   }, []);
+
+  if (!user) {
+    return <InputForm userState={[user, setUser]} />;
+  }
 
   return (
     <div>

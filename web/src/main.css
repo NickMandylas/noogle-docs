@@ -34,6 +34,49 @@ body {
   box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.5);
 }
 
+.input-form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: sans-serif;
+  font-size: 15px;
+  background-color: #000;
+  color: #fff
+}
+
+.input-form form {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-form .field {
+  padding: 7px 0 7px 5px;
+  border: 3px solid #fff;
+  background-color: #000;
+  color: #fff;
+  font-size: 15px;
+}
+
+.input-form .field:focus {
+  outline: none;
+}
+
+.input-form .button {
+  margin-top: 10px;
+  padding: 7px 0 7px 0;
+  font-size: 15px;
+  border: 3px solid #fff;
+  background-color: #000;
+  color: #fff;
+  font-weight: bold;
+}
+
+.input-form .button:hover {
+  background-color: #fff;
+  color: #000;
+}
+
 @page {
   margin: 1in;
 }

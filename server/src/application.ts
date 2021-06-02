@@ -64,8 +64,11 @@ export default class Application {
     this.host.get("/", { websocket: true }, (connection) => {
       const socket = connection.socket as unknown as WebsocketEx;
 
+      // Socket Close -- Remove Cursor from other connected document connections.
       socket.on("close", () => {
         this.clients.leave(socket.documentId, socket);
+
+        if (this.clients.store[socket.documentId] === undefined) return; // If connection has no document associated.
 
         for (const client of this.clients.store[socket.documentId!]) {
           client.send(
@@ -79,11 +82,13 @@ export default class Application {
         }
       });
 
+      // Socket Receive Event
       socket.on("message", async (message: string) => {
         const data: NoogleMessage = JSON.parse(message);
         const em = this.orm.em.fork();
 
         switch (data.type) {
+          // Send changes to all connected to document.
           case "send-updates": {
             for (const client of this.clients.store[data.message.id]) {
               if (client != socket) {
@@ -98,6 +103,7 @@ export default class Application {
             break;
           }
 
+          // Send updated cursor positions to document.
           case "send-cursor": {
             for (const client of this.clients.store[data.message.id]) {
               if (client != socket) {
@@ -116,6 +122,7 @@ export default class Application {
             break;
           }
 
+          // On first load, retrieve document data from DB.
           case "retrieve-document": {
             if (!validator.isUUID(data.message.id)) {
               socket.send(
@@ -155,6 +162,7 @@ export default class Application {
             break;
           }
 
+          // Save documnent to DB.
           case "save-document": {
             const cache = await redis().get(`DOCUMENT_${data.message.id}`);
             const deltaJSON = JSON.stringify(data.message.delta);
