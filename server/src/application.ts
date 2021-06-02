@@ -161,6 +161,20 @@ export default class Application {
               }),
             );
 
+            for (const client of this.clients.store[data.message.id]) {
+              if (client != socket) {
+                client.send(
+                  JSON.stringify({
+                    type: "new-cursor",
+                    cursor: {
+                      id: data.message.userId,
+                      name: data.message.name,
+                    },
+                  }),
+                );
+              }
+            }
+
             break;
           }
 

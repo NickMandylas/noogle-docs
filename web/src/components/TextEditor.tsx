@@ -146,6 +146,16 @@ const TextEditor: React.FC<TextEditorProps> = () => {
 
   // Retrieve Changes/Updates from Server
   useEffect(() => {
+    const newCursor = (cursor: { id: string; name: string }) => {
+      if (cursors) {
+        const cursorColour =
+          cursorColours[Math.floor(Math.random() * cursorColours.length)];
+        cursors.createCursor(cursor.id, cursor.name, cursorColour);
+        cursors.toggleFlag(cursor.id, true);
+        cursorStore.push(cursor.id);
+      }
+    };
+
     if (quill && socket && cursors) {
       const handler = (delta: Delta) => {
         quill.updateContents(delta);
@@ -165,20 +175,20 @@ const TextEditor: React.FC<TextEditorProps> = () => {
             handler(message.delta!);
             break;
 
+          case "new-cursor":
+            if (message.cursor) {
+              const cursor = message.cursor;
+              newCursor(cursor);
+              toast(`👋 ${cursor.name} has entered the document.`);
+            }
+            break;
+
           case "received-cursor":
             if (message.cursor) {
               const cursor = message.cursor;
-              const cursorColour =
-                cursorColours[Math.floor(Math.random() * cursorColours.length)];
-
-              // TODO - Should be its own websocket event.
-              if (!cursorStore.includes(message.cursor.id)) {
-                cursorStore.push(message.cursor.id);
-                cursors.createCursor(cursor.id, cursor.name, cursorColour);
-                toast(`👋 ${cursor.name} has entered the document.`);
+              if (!cursorStore.includes(cursor.id)) {
+                newCursor(cursor);
               }
-
-              cursors.toggleFlag(cursor.id, true);
               cursors.moveCursor(cursor.id, cursor.range);
             }
             break;
